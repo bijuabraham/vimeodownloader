@@ -1,0 +1,5 @@
+PyVimeo
+requests
+click
+tqdm
+python-dotenv
