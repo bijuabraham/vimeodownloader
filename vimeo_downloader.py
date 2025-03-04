@@ -617,7 +617,7 @@ def get_best_download_link(video, client, debug=False, prefer_hd=True):
         return None
 
 
-def download_video(video_id=None, count=None, debug=False, prefer_hd=True):
+def download_video(video_id=None, count=None, debug=False, prefer_hd=True, skip_ids=None):
     """Download videos from the user's account.
     
     Args:
@@ -625,7 +625,11 @@ def download_video(video_id=None, count=None, debug=False, prefer_hd=True):
         count: Optional limit on the number of videos to download
         debug: Whether to print debug information
         prefer_hd: If True, prefer 720p resolution; if False, get highest resolution
+        skip_ids: Optional list of video IDs to skip
     """
+    # Initialize skip_ids to empty list if None
+    if skip_ids is None:
+        skip_ids = []
     client = get_vimeo_client()
     
     # Create the download directory if it doesn't exist
@@ -661,6 +665,11 @@ def download_video(video_id=None, count=None, debug=False, prefer_hd=True):
             video_id = video["uri"].split("/")[-1]
             video_name = video["name"]
             
+            # Skip this video if its ID is in the skip list
+            if video_id in skip_ids:
+                click.echo(f"\nSkipping video: {video_name} (ID: {video_id}) as requested")
+                continue
+                
             click.echo(f"\nProcessing video: {video_name} (ID: {video_id})")
             
             # Get the download link
@@ -743,14 +752,22 @@ def list(limit):
     list_videos(limit)
 
 
+def parse_skip_ids(ctx, param, value):
+    """Parse the skip IDs from a comma-separated string."""
+    if not value:
+        return []
+    # Split by comma and strip whitespace from each ID
+    return [id.strip() for id in value.split(',')]
+
 @cli.command()
 @click.option("--video-id", help="Download a specific video by ID")
 @click.option("--count", type=int, help="Limit the number of videos to download")
 @click.option("--debug", is_flag=True, help="Enable debug output with full JSON responses")
 @click.option("--highest-quality", is_flag=True, help="Download highest quality instead of 720p")
-def download(video_id, count, debug, highest_quality):
+@click.option("--skip", callback=parse_skip_ids, help="Comma-separated list of video IDs to skip (e.g., '123456,789012')")
+def download(video_id, count, debug, highest_quality, skip):
     """Download videos from your Vimeo account."""
-    download_video(video_id, count, debug, not highest_quality)
+    download_video(video_id, count, debug, not highest_quality, skip)
 
 
 if __name__ == "__main__":
